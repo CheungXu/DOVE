@@ -3,7 +3,7 @@
 import dove
 import copy
 PERSON_NUM = 20
-save_path = 'D:\\09economic\\data\\test.txt'
+save_path = 'E:\\DOVE\\DOVE\\test.txt'
 save = open(save_path,'w')
 
 random = dove.list_randomer(0,PERSON_NUM)

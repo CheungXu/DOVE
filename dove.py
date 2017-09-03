@@ -97,6 +97,7 @@ class experiment(object):
             self.__suitor_avg_rank.append(0.0)
         for i in range(len(receivers)):
             self.__receivers_avg_rank.append(0.0)
+
     def avg_rank(self):
         for i in range(len(self.__suitors)):
             love_list = self.__suitors[i].get_list()
@@ -112,16 +113,22 @@ class experiment(object):
                 self.__suitor_avg_rank[index] = self.__suitor_avg_rank[index] + j + 1
         for i in range(len(self.__suitor_avg_rank)):
             self.__suitor_avg_rank[i] = self.__suitor_avg_rank[i] / float(len(self.__receivers))            
+
     def start(self):
         self.avg_rank()
         times = 0
-        while times < 50:
+        pre_change = True
+        now_change = True
+        while True:
+            pre_change = now_change
+            now_change = False
             print 'TIMES: ', times
             times = times + 1
             for i in range(len(self.__suitors)):
                 suitor = self.__suitors[i]
                 spouse = suitor.get_spouse()
                 if spouse == -1:
+                    now_change = True
                     target = suitor.get_target()
                     print i,'target  ',target
                     if target == -1:
@@ -131,25 +138,30 @@ class experiment(object):
                         if suitor.go_after(self.__receivers[target]):
                             if husband >= 0:
                                 self.__receivers[target].threw_away(self.__suitors[husband])
+            if not pre_change and not now_change:
+                break
         return True
+
     def print_suitors(self):
-        print 'id  spouse  change_num  spouse_num  avg_rank'
+        print 'id  spouse  change_num  spouse_rank  avg_rank'
         for i in range(len(self.__suitors)):
             print self.__suitors[i].get_id(), '    ', \
                   self.__suitors[i].get_spouse(), '       ', \
                   self.__suitors[i].get_change_num(), '         ', \
                   self.__suitors[i].get_spouse_num(), '       ', \
                   self.__suitor_avg_rank[i]
+
     def print_receivers(self):
-        print 'id  spouse  change_num  spouse_num  avg_rank'
+        print 'id  spouse  change_num  spouse_rank  avg_rank'
         for i in range(len(self.__receivers)):
             print self.__receivers[i].get_id(), '    ',\
                   self.__receivers[i].get_spouse(), '       ',\
                   self.__receivers[i].get_change_num(), '         ',\
                   self.__receivers[i].get_spouse_num(), '       ',\
                   self.__receivers_avg_rank[i]
+
     def save_suitors(self,save):
-        save.write('id  spouse  change_num  spouse_num  avg_rank\n')
+        save.write('id  spouse  change_num  spouse_rank  avg_rank\n')
         for i in range(len(self.__suitors)):
             line = str(self.__suitors[i].get_id()) + '    ' \
                    + str(self.__suitors[i].get_spouse()) + '       '\
@@ -157,8 +169,9 @@ class experiment(object):
                    + str(self.__suitors[i].get_spouse_num()) + '       ' \
                    + str(self.__suitor_avg_rank[i]) + '\n'
             save.write(line)
+
     def save_receivers(self,save):
-        save.write('id  spouse  change_num  spouse_num  avg_rank\n')
+        save.write('id  spouse  change_num  spouse_rank  avg_rank\n')
         for i in range(len(self.__receivers)):
             line = str(self.__receivers[i].get_id()) + '    ' \
                    + str(self.__receivers[i].get_spouse()) + '       '\

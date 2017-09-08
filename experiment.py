@@ -1,19 +1,20 @@
+# -*- coding:utf-8 -*-  
 import dove
 import copy
 
-class experiment(object):
+class Experiments(object):
     def __init__(self,person_num = 20):
         self.person_num = person_num
         self.save_path = '.\\data\\test.txt'
         self.save = open(self.save_path,'w')
-        random = dove.list_randomer(0,self.person_num)
+        random = dove.List_randomer(0,self.person_num)
         self.mans_list = []
         self.womans_list = []
         for i in range(self.person_num):
             self.mans_list.append(copy.copy(random.create_list()))
             self.womans_list.append(copy.copy(random.create_list()))
 
-    def end(self):
+    def __del__(self):
         self.person_num  = 0
         self.save_path = ''
         self.save.close()
@@ -37,9 +38,9 @@ class experiment(object):
     def __unidirectional_match__(self,suitor,receiver):
         suitor_list = copy.deepcopy(suitor)
         receiver_list = copy.deepcopy(receiver)
-        suitor_result = dove.create_Suitors(suitor_list)
-        receiver_result = dove.create_Receivers(receiver_list)
-        experiment = dove.experiment(suitor_result,receiver_result)
+        suitor_result = dove.create_Suitors(suitor_list,5)
+        receiver_result = dove.create_Receivers(receiver_list,5)
+        experiment = dove.Experiment(suitor_result,receiver_result)
         experiment.start()
         return suitor_result,receiver_result,experiment
 
@@ -68,9 +69,11 @@ class experiment(object):
         exp2.print_receivers()
         print 'SUI_WOM:'
         exp2.print_suitors()
+            
 
+            
 if __name__ == '__main__':
-    exp = experiment(20)
+    exp = Experiments(20)
     exp.write_init_condition()
     exp.unidirectional_match_both_sides()
-    exp.end()
+    del exp

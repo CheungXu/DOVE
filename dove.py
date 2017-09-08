@@ -1,25 +1,58 @@
+# -*- coding:utf-8 -*-  
+
 import random
 
-class person(object):
+"""
+CLASS: Person
+
+PROPERTY:
+id：Person ID(unique value).
+love_list: Person's love rank list.
+sex: Person's sex(not used yete).
+spouse: The ID of person's spouse(-1 refer to no spouse).
+spouse_num: The rank of spouse in love list.
+change_num: The times of change spouse of person.
+accepted_threshold: The worst spouse that person can accept in love list.
+
+FUNCTION:
+marriage_with(): Establish relation link in two person.
+dismarriaged(): Break relation link.
+spouse_num_add_1(): Add 1 to spouse_num.
+set_spouse_num(): Set set_spouse_num to specified value.
+print_all(): Print person information.
+"""
+class Person(object):
     def __init__(self, person_id, love_list, sex):
+        if not isinstance(person_id,int) or not isinstance(love_list,list) or not isinstance(sex,int):
+            raise ValueError
         self.__id = person_id
         self.__list = love_list
         self.__sex = sex
         self.__spouse = -1
-        self.__spouse_num = 1
+        self.__spouse_num = -1
         self.__change_num = 0
+        self.__accepted_threshold = len(love_list) - 1
     def marriage_with(self, person_id):
         self.__spouse = person_id
         self.__change_num = self.__change_num + 1
         return self.__spouse
     def dismarriaged(self):
-        self.__spouse = -1        
+        self.__spouse = -1
+        self.__spouse_num = -1
     def spouse_num_add_1(self):
         self.__spouse_num = self.__spouse_num + 1
     def set_spouse_num(self, num):
-        self.__spouse_num = num
-    def del_list_0(self):
-        del self.__list[0]
+        if num < 0 or num > self.__accepted_threshold + 1:
+            return False
+        else:
+            self.__spouse_num = num
+            return True
+    def set_accepted_threshold(self,num):
+        if num<0 or num > (len(self.__list)-1):
+            return False
+        else:
+            self.__accepted_threshold = num - 1
+            return True
     def get_id(self):
         return self.__id
     def get_list(self):
@@ -32,6 +65,8 @@ class person(object):
         return self.__change_num
     def get_spouse_num(self):
         return self.__spouse_num
+    def get_accepted_threshold(self):
+        return self.__accepted_threshold
     def print_all(self):
         print 'ID:', self.__id
         print 'List:', self.__list
@@ -39,13 +74,43 @@ class person(object):
         print 'Sex:', self.__sex
         print 'Change_num:', self.__change_num
 
-class suitor(person):
+
+"""
+CLASS: Suitor
+
+PROPERTY: Inherit from CLASS Person
+target_iter: Target index in love list.
+activity: Suitor state(Stop search when activity is False).
+
+FUNCTION:
+go_after(): Try to establish relation link to someone.
+__refused():Called when establish relation link failed.
+be_thrown():Called when relation link was break by spouse.
+get_target(): Return the target of suitor.
+next_target(): Move target to next available person.
+"""
+class Suitor(Person):
+    def __init__(self, person_id, love_list, sex):
+        Person.__init__(self,person_id,love_list,sex)
+        self.__activity = True
+        self.__target_iter = 0
+        
+    def next_target(self):
+        if self.__target_iter < self.get_accepted_threshold():
+            self.__target_iter = self.__target_iter + 1
+            return True
+        else:
+            return False
+        
     def go_after(self, receiver):
+        if not isinstance(receiver,Receiver):
+            raise ValueError
         husband_id = receiver.get_spouse()
         love_list = receiver.get_list()
         person_id = receiver.get_id()
         self_id = self.get_id()
         rank = love_list.index(self_id)
+        accepted_threshold = receiver.get_accepted_threshold()
         print 'rank:', rank
         change_husband = True
         if husband_id != -1:
@@ -53,41 +118,58 @@ class suitor(person):
             print 'husband_rank', husband_rank
             if rank > husband_rank:
                 change_husband = False
+        elif rank > accepted_threshold:
+                change_husband = False
         if change_husband:
             receiver.marriage_with(self_id)
             receiver.refresh_spouse_num(rank+1)
             self.marriage_with(person_id)
+            self.set_spouse_num(self.__target_iter+1)
             print 'merriage  ', self_id,person_id
             return True
         else:
             self.__refused()
             return False
+        
     def __refused(self):
-        love_list = self.get_list()
-        if len(love_list) > 0:
-            self.del_list_0()       
-            self.spouse_num_add_1()
-            return True
-        else:
-            return False
+        res = self.next_target()
+        if not res:
+            self.__activity = False
+        return res
+        
     def be_thrown(self):
         self.dismarriaged()
         return self.__refused()
+    
     def get_target(self):
         love_list = self.get_list()
-        if len(love_list) > 0:
-            return love_list[0]
-        else:
-            return -1
+        return love_list[self.__target_iter]
 
-class receiver(person):
+    def is_activity(self):
+        return self.__activity
+
+
+class Receiver(Person):
     def threw_away(self,suitor):
         suitor.be_thrown()
     def refresh_spouse_num(self,num):
         self.set_spouse_num(num)
 
 
-class experiment(object):
+"""
+CLASS: Experiment
+
+PROPERTY:
+suitors: A set of instance of CLASS Suitors.
+receivers: A set of instance of CLASS Receivers.
+suitor_avg_rank: Save sutior average rank in receivers.
+receivers_avg_rank:Save receiver average rank in suitors.
+
+FUNCTION:
+avg_rank()：Caculate receivers_avg_rank and suitor_avg_rank.
+start(): Start match experiment.
+"""
+class Experiment(object):
     def __init__(self, suitors, receivers):
         self.__suitors = suitors
         self.__receivers = receivers
@@ -127,7 +209,7 @@ class experiment(object):
             for i in range(len(self.__suitors)):
                 suitor = self.__suitors[i]
                 spouse = suitor.get_spouse()
-                if spouse == -1:
+                if spouse == -1 and suitor.is_activity():
                     now_change = True
                     target = suitor.get_target()
                     print i,'target  ',target
@@ -138,6 +220,7 @@ class experiment(object):
                         if suitor.go_after(self.__receivers[target]):
                             if husband >= 0:
                                 self.__receivers[target].threw_away(self.__suitors[husband])
+                                print target,' threw away ',husband
             if not pre_change and not now_change:
                 break
         return True
@@ -180,7 +263,18 @@ class experiment(object):
                    + str(self.__receivers_avg_rank[i]) + '\n'
             save.write(line)
 
-class list_randomer(object):
+
+"""
+CLASS: List_randomer
+
+PROPERTY:
+bottom,top: The range of random.
+pick_list: List of random numbers.
+
+FUNCTION:
+create_list: Shuffle random numbers.
+"""
+class List_randomer(object):
     def __init__(self, bottom, top):
         self.__bottom = bottom
         self.__top = top
@@ -194,16 +288,20 @@ class list_randomer(object):
         random.shuffle(self.__pick_list)
         return self.__pick_list
 
-def create_Suitors(love_lists):
+def create_Suitors(love_lists, accepted_threshold = 0):
     suis = []
     for i in range(len(love_lists)):
-        sui = suitor(i,love_lists[i],1)
+        sui = Suitor(i,love_lists[i],1)
+        if accepted_threshold:
+            sui.set_accepted_threshold(accepted_threshold)
         suis.append(sui)
     return suis
 
-def create_Receivers(love_lists):
+def create_Receivers(love_lists, accepted_threshold = 0):
     recs = []
     for i in range(len(love_lists)):
-        rec = receiver(i,love_lists[i],1)
+        rec = Receiver(i,love_lists[i],1)
+        if accepted_threshold:
+            rec.set_accepted_threshold(accepted_threshold)
         recs.append(rec)
     return recs

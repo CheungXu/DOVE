@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-  
 
 import random
+import numpy as np
 
 """
 CLASS: Person
@@ -22,16 +23,20 @@ set_spouse_num(): Set set_spouse_num to specified value.
 print_all(): Print person information.
 """
 class Person(object):
-    def __init__(self, person_id, love_list, sex):
-        if not isinstance(person_id,int) or not isinstance(love_list,list) or not isinstance(sex,int):
+    def __init__(self, person_id,feature_list,value_list):
+        if not isinstance(person_id,int) or not isinstance(feature_list,list) or not isinstance(value_list,list):
+            raise ValueError
+        elif not len(feature_list) == len(value_list):
             raise ValueError
         self.__id = person_id
-        self.__list = love_list
-        self.__sex = sex
+        self.__list = []
+        self.__feature_num = len(feature_list)
+        self.__feature_list = feature_list
+        self.__value_list = value_list
         self.__spouse = -1
         self.__spouse_num = -1
         self.__change_num = 0
-        self.__accepted_threshold = len(love_list) - 1
+        self.__accepted_threshold = 0
     def marriage_with(self, person_id):
         self.__spouse = person_id
         self.__change_num = self.__change_num + 1
@@ -59,8 +64,6 @@ class Person(object):
         return self.__list
     def get_spouse(self):
         return self.__spouse
-    def get_sex(self):
-        return self.__sex
     def get_change_num(self):
         return self.__change_num
     def get_spouse_num(self):
@@ -90,8 +93,8 @@ get_target(): Return the target of suitor.
 next_target(): Move target to next available person.
 """
 class Suitor(Person):
-    def __init__(self, person_id, love_list, sex):
-        Person.__init__(self,person_id,love_list,sex)
+    def __init__(self, person_id, feature_list, value_list):
+        Person.__init__(self,person_id,feature_list,value_list)
         self.__activity = True
         self.__target_iter = 0
         
@@ -148,7 +151,14 @@ class Suitor(Person):
     def is_activity(self):
         return self.__activity
 
+"""
+CLASS: Receiver
 
+FUNCTION:
+threw_away(): Threw spouse.
+refresh_spouse_num():Refresh spouse num after threw.
+
+"""
 class Receiver(Person):
     def threw_away(self,suitor):
         suitor.be_thrown()
@@ -282,6 +292,83 @@ class Experiment(object):
 
 
 """
+CLASS: Feature_randomer
+
+PROPERTY:
+num: Num of features.
+pick_list: List of features.
+
+FUNCTION:
+create_feature: Create random features.
+"""
+class Feature_randomer(object):
+    def __init__(self,feature_num,person_num):
+        self.__feature_num = feature_num
+        self.__person_num = person_num
+        self.__feature_list = []
+    def __clear(self):
+        self.__feature_list = []
+    def get_feature(self):
+        return self.__feature_list
+    def create_feaure(self):
+        self.__clear()
+        for i in range(self.__person_num):
+            f_list = np.round(np.random.normal(5,2,self.__feature_num),2)
+            self.__feature_list.append(f_list.tolist())
+        return self.__feature_list
+    def create_feature_normalisze(self):
+        self.__clear()
+        for i in range(self.__person_num):
+            f_list = np.round(np.random.normal(5,2,self.__feature_num),2)
+            self.__feature_list.append(f_list.tolist())
+        max_feature = []
+        min_feature = []
+        for j in range(self.__feature_num):
+            max_feature.append(-100)
+            min_feature.append(100)
+        for i in range(self.__person_num):
+            for j in range(self.__feature_num):
+                if self.__feature_list[i][j] > max_feature[j]:
+                    max_feature[j] = self.__feature_list[i][j]
+                if self.__feature_list[i][j] < min_feature[j]:
+                    min_feature[j] = self.__feature_list[i][j]
+        length = []
+        for j in range(self.__feature_num):
+            length.append(max_feature[j]-min_feature[j])
+        for i in range(self.__person_num):
+            for j in range(self.__feature_num):
+                self.__feature_list[i][j] = (self.__feature_list[i][j] - min_feature[j]) / length[j]
+                
+        return np.round(self.__feature_list,2)
+
+
+class Value_randomer(object):
+    def __init__(self,value_num,person_num):
+        self.__feature_num = value_num
+        self.__person_num = person_num
+        self.__value_list = []
+    def __clear(self):
+        self.__value_list = []
+    def get_value_list(self):
+        return self.__value_list
+    def create_value_list(self):
+        self.__clear()
+        for i in range(self.__person_num):
+            x = np.round(np.random.normal(5,2,self.__feature_num),2)
+            min_value = 100
+            max_value = -100
+            sum_value = 0.0
+            for feature in x:
+                sum_value = sum_value + feature
+            for i in range(len(x)):
+                x[i] = np.round(x[i] / sum_value,2)
+            self.__value_list.append(x.tolist())
+        return self.__value_list
+
+        
+        
+
+"""
 CLASS: List_randomer
 
 PROPERTY:
@@ -315,6 +402,7 @@ def create_Suitors(love_lists, accepted_threshold = 0):
             sui.set_accepted_threshold(accepted_threshold)
         suis.append(sui)
     return suis
+
 
 def create_Receivers(love_lists, accepted_threshold = 0):
     recs = []

@@ -181,6 +181,8 @@ class Experiment(object):
             self.__receivers_avg_rank.append(0.0)
 
     def avg_rank(self):
+        print len(self.__suitors)
+        print len(self.__receivers)
         for i in range(len(self.__suitors)):
             love_list = self.__suitors[i].get_list()
             for j in range(len(love_list)):
@@ -263,6 +265,21 @@ class Experiment(object):
                    + str(self.__receivers_avg_rank[i]) + '\n'
             save.write(line)
 
+    def save_couple_rank():
+        save.write('suitor_id  receiver_id  suitor_rank  receiver_rank  avg_rank  rank_diff')
+        for i in range(len(self.__suitors)):
+            suitor =  self.__suitors[i]
+            if suitor.get_spouse() != -1:
+                suitor_rank = self.__suitors_avg_rank[i]
+                receiver_rank = self.__receivers_avg_rank[i]
+                line = str(suitors.get_id()) + '   '\
+                       + str(suitors.get_spouse()) + '      '\
+                       + str(suitor_rank) + '      '\
+                       + str(receiver_rank) + '      '\
+                       + str((suitor_rank+receiver_rank)/2) + '     '\
+                       + str(abs(suitor_rank-receiver_rank) + '\n')
+                save.write(line)
+
 
 """
 CLASS: List_randomer
@@ -288,6 +305,8 @@ class List_randomer(object):
         random.shuffle(self.__pick_list)
         return self.__pick_list
 
+
+#Create Suitors/Receivers by Randomer
 def create_Suitors(love_lists, accepted_threshold = 0):
     suis = []
     for i in range(len(love_lists)):
@@ -301,6 +320,38 @@ def create_Receivers(love_lists, accepted_threshold = 0):
     recs = []
     for i in range(len(love_lists)):
         rec = Receiver(i,love_lists[i],1)
+        if accepted_threshold:
+            rec.set_accepted_threshold(accepted_threshold)
+        recs.append(rec)
+    return recs
+
+
+#Load Suitors/Receivers from Record File
+def load_Suitors(path,accepted_threshold = 0):
+    suis = []
+    with open(path, 'r') as f:
+        lines  = f.readlines()
+    for i in len(lines):
+        love_list = []
+        data = line[i].strip().split()
+        for d in data:
+            love_list.append(int(d))
+        sui = Suitor(i,love_lists,1)
+        if accepted_threshold:
+            rec.set_accepted_threshold(accepted_threshold)
+        suis.append(sui)
+    return suis
+
+def load_Receivers(path,accepted_threshold = 0):
+    recs = []
+    with open(path, 'r') as f:
+        lines  = f.readlines()
+    for i in len(lines):
+        love_list = []
+        data = line[i].strip().split()
+        for d in data:
+            love_list.append(int(d))
+        rec = Receiver(i,love_lists,1)
         if accepted_threshold:
             rec.set_accepted_threshold(accepted_threshold)
         recs.append(rec)

@@ -3,3 +3,8 @@ This program implementation Gale-Shapley algorithm which win the Economic Nobel 
 
 配置环境（Environment）:
 Python 2.7.12 64bit/Microsoft Office 2016
+
+## TODO
+*更新属性load方法
+*图绘制
+*界面GUI

@@ -19,6 +19,19 @@ class Experiments(object):
     def write_init_condition(self, matching):
         matching.save_init_information(self.save)
 
+    def avg_rank(self):
+        matching = dove.Matching(self.man,self.woman)
+        matching.avg_rank()
+        """
+        self.write_init_condition(matching)
+        self.save.write('\nEXP ONE \n')
+        self.save.write('SUI_MAN\n')
+        matching.save_suitors(self.save)
+        self.save.write('REC_WOMAN\n')
+        matching.save_receivers(self.save)
+        """
+        return matching
+    
     def unidirectional_match(self):
         matching = dove.Matching(self.man,self.woman)
         self.write_init_condition(matching)
@@ -64,6 +77,16 @@ class Experiments(object):
 
             
 if __name__ == '__main__':
-    exp = Experiments(20,3)
-    exp.unidirectional_match()
+    exp = Experiments(500,5)
+    mth = exp.unidirectional_match()
+    s_a, r_a = mth.get_avg_rank()
+    s_s, r_s = mth.get_std_rank()
+    s_r, r_r = mth.get_spouse_rank()
     del exp
+    import matplotlib.pyplot as plt
+    plt.scatter(s_a,s_r,c='b')
+    plt.scatter(r_a,r_r,c='r')
+    #plt.scatter(s_a, s_s, c = 'b')
+    #plt.scatter(r_a, r_s, c = 'r')
+    plt.show()
+    

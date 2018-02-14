@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-  
 
-import random
+import random,math
 import numpy as np
 
 """
@@ -141,17 +141,17 @@ class Suitor(Person):
         self_id = self.get_id()
         rank = love_list.index(self_id)
         accepted_threshold = receiver.get_accepted_threshold()
-        log.write('  Suitor Rank:'+str(rank)+'\n')
+        log.write('    Suitor Rank:'+str(rank)+'\n')
         change_husband = True
         if husband_id != -1:
             husband_rank = love_list.index(husband_id)
-            log.write('  Husband Rank: '+str(husband_rank)+'\n')
+            log.write('    Husband Rank: '+str(husband_rank)+'\n')
             if rank > husband_rank:
                 change_husband = False
         elif rank > accepted_threshold:
                 change_husband = False
         if change_husband:
-            log.write('  Succeed: ')
+            log.write('    Succeed: ')
             receiver.marriage_with(self_id)
             receiver.refresh_spouse_num(rank+1)
             self.marriage_with(person_id)
@@ -159,7 +159,7 @@ class Suitor(Person):
             log.write(str(self_id) + ' married with  '+str(person_id)+'\n')
             return True
         else:
-            log.write('  Failed\n')
+            log.write('    Failed\n')
             self.__refused()
             return False
         
@@ -216,6 +216,11 @@ start(): Start match experiment.
 class Matching(object):
     def __init__(self, suitors, receivers):
         self.__log = open('log.txt','w')
+        self.__match_done = False
+        self.__pre_change = True
+        self.__now_change = True
+        self.__times = 0
+        self.__index = 0
         self.__suitors = suitors
         self.__receivers = receivers
         self.__suitor_features = []
@@ -224,7 +229,7 @@ class Matching(object):
             self.__suitor_features.append([])
             self.__receiver_features.append([])
         self.__suitor_avg_rank = []
-        self.__receivers_avg_rank = []
+        self.__receiver_avg_rank = []
         
         for i in range(len(self.__suitors)):
             self.__suitor_avg_rank.append(0.0)
@@ -232,7 +237,7 @@ class Matching(object):
             for j in range(len(features)):
                 self.__suitor_features[j].append(features[j])
         for i in range(len(self.__receivers)):
-            self.__receivers_avg_rank.append(0.0)
+            self.__receiver_avg_rank.append(0.0)
             features = self.__receivers[i].get_feature_list()
             for j in range(len(features)):
                 self.__receiver_features[j].append(features[j])
@@ -247,74 +252,105 @@ class Matching(object):
         self.__suitor_features = []
         self.__receiver_features = []
         self.__suitor_avg_rank = []
-        self.__receivers_avg_rank = []
+        self.__receiver_avg_rank = []
         
     def avg_rank(self):
-        print len(self.__suitors)
-        print len(self.__receivers)
+        self.__suitor_ranks  = []
+        self.__receiver_ranks = []
+        for i in range(len(self.__suitors)):
+            self.__suitor_ranks.append([])
+        for i in range(len(self.__receivers)):
+            self.__receiver_ranks.append([])
         for i in range(len(self.__suitors)):
             love_list = self.__suitors[i].get_love_list()
             for j in range(len(love_list)):
                 index = love_list[j]
-                self.__receivers_avg_rank[index] = self.__receivers_avg_rank[index] + j + 1
-        for i in range(len(self.__receivers_avg_rank)):
-            self.__receivers_avg_rank[i] = self.__receivers_avg_rank[i] / float(len(self.__suitors))
+                self.__receiver_avg_rank[index] = self.__receiver_avg_rank[index] + j + 1
+                self.__receiver_ranks[index].append(j+1)     
+        for i in range(len(self.__receiver_avg_rank)):
+            self.__receiver_avg_rank[i] = self.__receiver_avg_rank[i] / float(len(self.__suitors))
         for i in range(len(self.__receivers)):
             love_list = self.__receivers[i].get_love_list()
             for j in range(len(love_list)):
                 index = love_list[j]
                 self.__suitor_avg_rank[index] = self.__suitor_avg_rank[index] + j + 1
+                self.__suitor_ranks[index].append(j+1)
         for i in range(len(self.__suitor_avg_rank)):
-            self.__suitor_avg_rank[i] = self.__suitor_avg_rank[i] / float(len(self.__receivers))            
+            self.__suitor_avg_rank[i] = self.__suitor_avg_rank[i] / float(len(self.__receivers))
+        self.__suitor_std_rank = [round(np.std(l),2) for l in self.__suitor_ranks]
+        self.__receiver_std_rank = [round(np.std(l),2) for l in self.__receiver_ranks]
 
+    def __add_index(self):
+        self.__index += 1
+        if self.__index == len(self.__suitors):
+            self.__times += 1
+            self.__index = 0
+            if not self.__pre_change and not self.__now_change:
+                self.__match_done = True
+                self.__log.write('DONE')
+            else:
+                self.__pre_change = self.__now_change
+                self.__now_change = False
+        return True
+    
+    def step(self):
+        if self.__match_done:
+            return False
+        suitor = self.__suitors[self.__index]
+        spouse = suitor.get_spouse()
+        if spouse == -1 and suitor.is_activity():
+            self.__now_change = True
+            target = suitor.get_target()
+            self.__log.write('  STEP '+str(self.__index) + '\n')
+            self.__log.write('    '+str(self.__index)+' target  '+str(target)+'\n')
+            if target == -1:
+                self.__add_index()
+                return True
+            else:
+                husband = self.__receivers[target].get_spouse()
+                if suitor.go_after(self.__receivers[target],self.__log):
+                    if husband >= 0:
+                        self.__receivers[target].threw_away(self.__suitors[husband])
+                        self.__log.write('    '+str(target)+' threw away '+str(husband)+'\n')
+        self.__add_index()
+        return True
+            
+    def epoch(self):
+        self.__log.write('EPOCH '+str(self.__times)+'\n')
+        for i in range(self.__index, len(self.__suitors)):
+            self.__index = i
+            self.step()
+    
     def start(self):
         self.avg_rank()
-        times = 0
-        pre_change = True
-        now_change = True
         while True:
-            pre_change = now_change
-            now_change = False
-            self.__log.write('TIMES:'+str(times)+'\n')
-            times = times + 1
-            for i in range(len(self.__suitors)):
-                suitor = self.__suitors[i]
-                spouse = suitor.get_spouse()
-                if spouse == -1 and suitor.is_activity():
-                    now_change = True
-                    target = suitor.get_target()
-                    self.__log.write('STEP '+str(i) + '\n')
-                    self.__log.write(str(i)+' target  '+str(target)+'\n')
-                    if target == -1:
-                        continue
-                    else:
-                        husband = self.__receivers[target].get_spouse()
-                        if suitor.go_after(self.__receivers[target],self.__log):
-                            if husband >= 0:
-                                self.__receivers[target].threw_away(self.__suitors[husband])
-                                self.__log.write('  '+str(target)+' threw away '+str(husband)+'\n')
-            if not pre_change and not now_change:
-                self.__log.write('DONE')
+            self.epoch()
+            if self.__match_done:
                 break
         return True
 
+    def is_done(self):
+        return self.__match_done
+    
     def print_suitors(self):
-        print 'id  spouse  change_num  spouse_rank  avg_rank'
+        print 'id  spouse  change_num  spouse_rank  avg_rank  std_rank'
         for i in range(len(self.__suitors)):
             print self.__suitors[i].get_id(), '    ', \
                   self.__suitors[i].get_spouse(), '       ', \
                   self.__suitors[i].get_change_num(), '         ', \
                   self.__suitors[i].get_spouse_num(), '       ', \
-                  self.__suitor_avg_rank[i]
+                  self.__suitor_avg_rank[i], '       ', \
+                  self.__suitor_std_rank[i]
 
     def print_receivers(self):
-        print 'id  spouse  change_num  spouse_rank  avg_rank'
+        print 'id  spouse  change_num  spouse_rank  avg_rank  std_rank'
         for i in range(len(self.__receivers)):
             print self.__receivers[i].get_id(), '    ',\
                   self.__receivers[i].get_spouse(), '       ',\
                   self.__receivers[i].get_change_num(), '         ',\
                   self.__receivers[i].get_spouse_num(), '       ',\
-                  self.__receivers_avg_rank[i]
+                  self.__receiver_avg_rank[i], '       ',\
+                  self.__receiver_std_rank[i]
     
     def save_init_information(self,save):
         save.write('SUI_LIST\n')
@@ -335,23 +371,25 @@ class Matching(object):
             save.write(line)
             
     def save_suitors(self,save):
-        save.write('id  spouse  change_num  spouse_rank  avg_rank\n')
+        save.write('id  spouse  change_num  spouse_rank  avg_rank  std_rank\n')
         for i in range(len(self.__suitors)):
             line = str(self.__suitors[i].get_id()) + '    ' \
                    + str(self.__suitors[i].get_spouse()) + '       '\
                    + str(self.__suitors[i].get_change_num()) + '         '\
                    + str(self.__suitors[i].get_spouse_num()) + '       ' \
-                   + str(self.__suitor_avg_rank[i]) + '\n'
+                   + str(self.__suitor_avg_rank[i]) + '       ' \
+                   + str(self.__suitor_std_rank[i]) + '\n'
             save.write(line)
 
     def save_receivers(self,save):
-        save.write('id  spouse  change_num  spouse_rank  avg_rank\n')
+        save.write('id  spouse  change_num  spouse_rank  avg_rank  std_rank\n')
         for i in range(len(self.__receivers)):
             line = str(self.__receivers[i].get_id()) + '    ' \
                    + str(self.__receivers[i].get_spouse()) + '       '\
                    + str(self.__receivers[i].get_change_num()) + '         '\
                    + str(self.__receivers[i].get_spouse_num()) + '       ' \
-                   + str(self.__receivers_avg_rank[i]) + '\n'
+                   + str(self.__receiver_avg_rank[i]) + '       ' \
+                   + str(self.__receiver_std_rank[i]) + '\n'
             save.write(line)
 
     def save_couple_rank():
@@ -368,6 +406,14 @@ class Matching(object):
                        + str((suitor_rank+receiver_rank)/2) + '     '\
                        + str(abs(suitor_rank-receiver_rank) + '\n')
                 save.write(line)
+                
+    def get_avg_rank(self):
+        return self.__suitor_avg_rank, self.__receiver_avg_rank
+    def get_std_rank(self):
+        return self.__suitor_std_rank,  self.__receiver_std_rank
+    def get_spouse_rank(self):
+        return [s.get_spouse_num() for s in self.__suitors], [r.get_spouse_num() for r in self.__receivers]
+    
 
 
 """
@@ -387,14 +433,28 @@ class Feature_randomer(object):
         self.__feature_list = []
     def __clear(self):
         self.__feature_list = []
+    def __sigmoid(self,value):
+        return 1.0/(1.0+math.exp(-value))
     def get_feature(self):
         return self.__feature_list
+    
     def create_feaure(self):
         self.__clear()
         for i in range(self.__person_num):
             f_list = np.round(np.random.normal(5,2,self.__feature_num),2)
             self.__feature_list.append(f_list.tolist())
         return self.__feature_list
+    
+    def create_feature_sigmoid(self):
+        self.__clear()
+        for i in range(self.__person_num):
+            f_list = np.round(np.random.normal(0,4,self.__feature_num),2)
+            self.__feature_list.append(f_list.tolist())
+        for i in range(self.__person_num):
+            for j in range(self.__feature_num):
+                self.__feature_list[i][j] = round(self.__sigmoid(self.__feature_list[i][j]),2)
+        return self.__feature_list
+        
     def create_feature_normalisze(self):
         self.__clear()
         for i in range(self.__person_num):
@@ -481,7 +541,7 @@ class List_randomer(object):
 def create_Person(person_num, feature_num, accepted_threshold = 0):
     fr = Feature_randomer(feature_num, person_num)
     wr = Weight_randomer(feature_num, person_num)
-    features = fr.create_feature_normalisze()
+    features = fr.create_feature_normalisze()  #fr.create_feature_sigmoid()#
     weights = wr.create_weight_list()
     persons = []
     for i in range(person_num):

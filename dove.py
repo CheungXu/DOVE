@@ -132,7 +132,7 @@ class Suitor(Person):
         else:
             return False
         
-    def go_after(self, receiver, log):
+    def go_after(self, receiver, log, info):
         if not isinstance(receiver,Suitor):
             raise ValueError
         husband_id = receiver.get_spouse()
@@ -142,26 +142,31 @@ class Suitor(Person):
         rank = love_list.index(self_id)
         accepted_threshold = receiver.get_accepted_threshold()
         log.write('    Suitor Rank:'+str(rank)+'\n')
+        info += '    Suitor Rank:'+str(rank)+'\n'
         change_husband = True
         if husband_id != -1:
             husband_rank = love_list.index(husband_id)
             log.write('    Husband Rank: '+str(husband_rank)+'\n')
+            info += '    Husband Rank: '+str(husband_rank)+'\n'
             if rank > husband_rank:
                 change_husband = False
         elif rank > accepted_threshold:
                 change_husband = False
         if change_husband:
             log.write('    Succeed: ')
+            info += '    Succeed: '
             receiver.marriage_with(self_id)
             receiver.refresh_spouse_num(rank+1)
             self.marriage_with(person_id)
             self.set_spouse_num(self.__target_iter+1)
             log.write(str(self_id) + ' married with  '+str(person_id)+'\n')
-            return True
+            info += str(self_id) + ' married with  '+str(person_id)+'\n'
+            return True, info
         else:
             log.write('    Failed\n')
+            info += '    Failed\n'
             self.__refused()
-            return False
+            return False, info
         
     def __refused(self):
         res = self.next_target()
@@ -254,7 +259,7 @@ class Matching(object):
         self.__suitor_avg_rank = []
         self.__receiver_avg_rank = []
         
-    def avg_rank(self):
+    def compute_avg_rank(self):
         self.__suitor_ranks  = []
         self.__receiver_ranks = []
         for i in range(len(self.__suitors)):
@@ -294,40 +299,50 @@ class Matching(object):
         return True
     
     def step(self):
+        show_info = 'EPOCH '+str(self.__times)+'\n' + '  STEP '+str(self.__index) + '\n'
+        self.__log.write('  STEP '+str(self.__index) + '\n')
         if self.__match_done:
-            return False
+            return 'done'
         suitor = self.__suitors[self.__index]
         spouse = suitor.get_spouse()
         if spouse == -1 and suitor.is_activity():
             self.__now_change = True
             target = suitor.get_target()
-            self.__log.write('  STEP '+str(self.__index) + '\n')
+            show_info +=  '    '+str(self.__index)+' target  '+str(target)+'\n'
             self.__log.write('    '+str(self.__index)+' target  '+str(target)+'\n')
             if target == -1:
                 self.__add_index()
-                return True
+                return show_info
             else:
                 husband = self.__receivers[target].get_spouse()
-                if suitor.go_after(self.__receivers[target],self.__log):
+                flag, show_info = suitor.go_after(self.__receivers[target],self.__log, show_info)
+                if flag:
                     if husband >= 0:
                         self.__receivers[target].threw_away(self.__suitors[husband])
+                        show_info += '    '+str(target)+' threw away '+str(husband)+'\n'
                         self.__log.write('    '+str(target)+' threw away '+str(husband)+'\n')
+        elif not suitor.is_activity():
+            show_info += '    ' + str(self.__index) + ' is not acitivity \n'
+        elif spouse != -1:
+            show_info +=  '    '  + str(self.__index) + ' is married (' + str(spouse) + ')\n'
         self.__add_index()
-        return True
+        return show_info
             
     def epoch(self):
+        show_info = ''
         self.__log.write('EPOCH '+str(self.__times)+'\n')
         for i in range(self.__index, len(self.__suitors)):
             self.__index = i
-            self.step()
-    
-    def start(self):
-        self.avg_rank()
+            show_info += self.step()
+        return show_info
+        
+    def exe_to_end(self):
+        show_info = ''
         while True:
-            self.epoch()
+            show_info += self.epoch()
             if self.__match_done:
                 break
-        return True
+        return show_info
 
     def is_done(self):
         return self.__match_done

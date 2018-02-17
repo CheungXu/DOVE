@@ -14,7 +14,8 @@ class Experiments(object):
     def __del__(self):
         self.person_num  = 0
         self.save_path = ''
-        self.save.close()
+        if self.save:
+            self.save.close()
         
     def write_init_condition(self, matching):
         matching.save_init_information(self.save)
@@ -35,7 +36,7 @@ class Experiments(object):
     def unidirectional_match(self):
         matching = dove.Matching(self.man,self.woman)
         self.write_init_condition(matching)
-        matching.start()
+        matching.compute_avg_rank()
         self.save.write('\nEXP ONE \n')
         self.save.write('SUI_MAN\n')
         matching.save_suitors(self.save)
@@ -89,4 +90,3 @@ if __name__ == '__main__':
     #plt.scatter(s_a, s_s, c = 'b')
     #plt.scatter(r_a, r_s, c = 'r')
     plt.show()
-    

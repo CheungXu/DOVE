@@ -9,6 +9,4 @@ This program implementation Gale-Shapley algorithm which win the Economic Nobel 
 ## TODO
 * 更新属性load方法
 
-* 图绘制
-
-* 带网络图的界面GUI
+* 底层逻辑重构

@@ -299,10 +299,11 @@ class Matching(object):
         return True
     
     def step(self):
-        show_info = 'EPOCH '+str(self.__times)+'\n' + '  STEP '+str(self.__index) + '\n'
+        show_info = 'EPOCH:'+str(self.__times)+'\n' + '  STEP:'+str(self.__index) + '\n'
         self.__log.write('  STEP '+str(self.__index) + '\n')
         if self.__match_done:
-            return 'done'
+            show_info += '    DONE\n'
+            return show_info
         suitor = self.__suitors[self.__index]
         spouse = suitor.get_spouse()
         if spouse == -1 and suitor.is_activity():

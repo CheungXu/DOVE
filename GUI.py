@@ -199,6 +199,13 @@ class GUI(QtGui.QWidget):
 
            def exeToEnd(self):
                       info = self.matching.exe_to_end()
+                      self.__clearLinks(self.statu_scene)
+                      self.__clearUpLinks(self.history_scene)
+                      records = info.split('EPOCH')
+                      del records[0]
+                      for record in records:
+                                 self.__refreshViewStep('EPOCH'+record)
+                      
                       self.showText.setText(info)
            
            def closeEvent(self, event):

@@ -84,7 +84,6 @@ class Experiments(object):
 
             
 if __name__ == '__main__':
-    """
     exp = Experiments(500,5)
     mth = exp.unidirectional_match()
     s_a, r_a = mth.get_avg_rank()
@@ -97,4 +96,3 @@ if __name__ == '__main__':
     #plt.scatter(s_a, s_s, c = 'b')
     #plt.scatter(r_a, r_s, c = 'r')
     plt.show()
-    """

@@ -427,8 +427,13 @@ class Matching(object):
         return self.__suitor_avg_rank, self.__receiver_avg_rank
     def get_std_rank(self):
         return self.__suitor_std_rank,  self.__receiver_std_rank
-    def get_spouse_rank(self):
-        return [s.get_spouse_num() for s in self.__suitors], [r.get_spouse_num() for r in self.__receivers]
+    def get_spouse_rank(self, num = 0):
+        if num == 0:
+            return [s.get_spouse_num() for s in self.__suitors], [r.get_spouse_num() for r in self.__receivers]
+        elif num > 0:
+            return self.__suitors[num -1].get_spouse_num()
+        elif num < 0:
+            return self.__receivers[abs(num)-1].get_spouse_num()
     
 
 
